@@ -29,9 +29,6 @@ limitations under the License.
   	<url-pattern>/*</url-pattern>
   </filter-mapping>
   
-  <context-param>
-		<param-name>javax.faces.STATE_SAVING_METHOD</param-name>
-		<param-value>client</param-value>
-	</context-param>
+  <distributable/>
 
 </web-app>

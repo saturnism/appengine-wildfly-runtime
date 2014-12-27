@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM appengine-wildfly-runtime
+FROM appengine-wildfly-runtime-ha
 
 # copy the GAE app.
 RUN mkdir -p /deployments/ROOT.war/

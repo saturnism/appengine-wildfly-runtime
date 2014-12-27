@@ -20,6 +20,7 @@ if [ -z "$RUNTIME_DIR" ]; then
   echo "Error: Required environment variable RUNTIME_DIR is not set."
   exit 1
 fi
+
 HEAP_SIZE_FRAC=0.8
 RAM_RESERVED_MB=150
 HEAP_SIZE=$(awk -v frac=$HEAP_SIZE_FRAC -v res=$RAM_RESERVED_MB /MemTotal/'{
@@ -62,4 +63,15 @@ else
 fi
 
 WILDFLY_HOME=${RUNTIME_DIR}
-JAVA_OPTS="-server -Xms${HEAP_SIZE} -Xmx${HEAP_SIZE} -XX:PermSize=${PERM_SIZE} -XX:MaxPermSize=${MAX_PERM_SIZE} -Djava.net.preferIPv4Stack=true -Djboss.modules.system.pkgs=org.jboss.byteman -Djava.awt.headless=true -Djboss.server.log.dir=/var/log/app_engine/custom_logs/ ${JAVA_OPTS} ${DBG_AGENT}" $WILDFLY_HOME/bin/standalone.sh -b=0.0.0.0 -bmanagement=0.0.0.0 -c standalone-appengine.xml
+
+if [[ "$GAE_PARTITION" = "dev" ]]; then
+  JAVA_OPTS="-server -Xms${HEAP_SIZE} -Xmx${HEAP_SIZE} -XX:PermSize=${PERM_SIZE} -XX:MaxPermSize=${MAX_PERM_SIZE} -Djava.net.preferIPv4Stack=true -Djboss.modules.system.pkgs=org.jboss.byteman -Djava.awt.headless=true -Djboss.server.log.dir=/var/log/app_engine/custom_logs/ ${JAVA_OPTS} ${DBG_AGENT}" $WILDFLY_HOME/bin/standalone.sh -b=0.0.0.0 -bmanagement=0.0.0.0 -c standalone-appengine.xml
+else
+  GOOGLE_PING_ACCESS=$(curl http://metadata.google.internal/computeMetadata/v1/project/attributes/GOOGLE_PING_ACCESS -H 'Metadata-Flavor: Google')
+  GOOGLE_PING_SECRET=$(curl http://metadata.google.internal/computeMetadata/v1/project/attributes/GOOGLE_PING_SECRET -H 'Metadata-Flavor: Google')
+  GOOGLE_PING_BUCKET=$(curl http://metadata.google.internal/computeMetadata/v1/project/attributes/GOOGLE_PING_BUCKET -H 'Metadata-Flavor: Google')
+  GOOGLE_HOST_IP=$(curl http://metadata.google.internal/computeMetadata/v1/instance/network-interfaces/0/ip -H 'Metadata-Flavor: Google')
+  JAVA_OPTS="-server -Xms${HEAP_SIZE} -Xmx${HEAP_SIZE} -XX:PermSize=${PERM_SIZE} -XX:MaxPermSize=${MAX_PERM_SIZE} -Djava.net.preferIPv4Stack=true -Djboss.modules.system.pkgs=org.jboss.byteman -Djava.awt.headless=true -Djboss.server.log.dir=/var/log/app_engine/custom_logs/ -Djgroups.google_ping.access_key=${GOOGLE_PING_ACCESS} -Djgroups.google_ping.secret_access_key=${GOOGLE_PING_SECRET} -Djgroups.google_ping.location=${GOOGLE_PING_BUCKET}
+  -Dgoogle.host.ip=${GOOGLE_HOST_IP} ${JAVA_OPTS} ${DBG_AGENT}" \
+  $WILDFLY_HOME/bin/standalone.sh -b=0.0.0.0 -bmanagement=0.0.0.0 -bjgroups=`hostname -I` -c standalone-appengine-ha.xml
+fi

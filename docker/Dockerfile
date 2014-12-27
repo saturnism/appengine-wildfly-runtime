@@ -16,36 +16,30 @@ FROM google/debian:wheezy
 ENV DEBIAN_FRONTEND noninteractive
 
 RUN apt-get -q update && \
-  apt-get install --no-install-recommends -y -q ca-certificates curl openjdk-7-jre-headless && \
+  apt-get install --no-install-recommends -y --force-yes -q ca-certificates curl openjdk-7-jre-headless && \
   apt-get clean && \
   rm /var/lib/apt/lists/*_*
 
 ENV WILDFLY_VERSION 8.2.0.Final
 RUN mkdir -p /var/lib/wildfly && (curl -0 http://download.jboss.org/wildfly/${WILDFLY_VERSION}/wildfly-${WILDFLY_VERSION}.tar.gz | tar -C /var/lib/wildfly --strip-components=1 -zx)
 
-ENV APPENGINE_VERSION 1.9.17
-ENV JETTY_VERSION 9.2.6.v20141205
-ENV JGROUPS_VERSION 3.5.1.Final
+ENV WILDFLY_HOME /var/lib/wildfly
+ENV APPENGINE_VERSION 1.9.18
+ENV JGROUPS_VERSION 3.6.2.Final
 
 RUN cd /tmp/ && curl -0 \
     -O http://repo1.maven.org/maven2/com/google/appengine/appengine-api-1.0-sdk/${APPENGINE_VERSION}/appengine-api-1.0-sdk-${APPENGINE_VERSION}.jar \
-    -O https://oss.sonatype.org/content/repositories/google-releases/com/google/appengine/appengine-managed-runtime/${APPENGINE_VERSION}/appengine-managed-runtime-${APPENGINE_VERSION}.jar \
-    -O http://repo1.maven.org/maven2/org/eclipse/jetty/jetty-util/${JETTY_VERSION}/jetty-util-${JETTY_VERSION}.jar \
-    -O https://repo1.maven.org/maven2/org/eclipse/jetty/jetty-xml/${JETTY_VERSION}/jetty-xml-${JETTY_VERSION}.jar \
-    -O https://repository.jboss.org/nexus/content/groups/public-jboss/org/jgroups/jgroups/${JGROUPS_VERSION}/jgroups-${JGROUPS_VERSION}.jar
+    -O https://oss.sonatype.org/content/repositories/google-releases/com/google/appengine/appengine-managed-runtime/${APPENGINE_VERSION}/appengine-managed-runtime-${APPENGINE_VERSION}.jar
 
-ADD . /var/lib/wildfly/
+ADD . ${WILDFLY_HOME}
 
 RUN mv /tmp/appengine-*.jar /var/lib/wildfly/modules/com/google/appengine/main/
 RUN sed -i "s/\$APPENGINE_VERSION/${APPENGINE_VERSION}/g" /var/lib/wildfly/modules/com/google/appengine/main/module.xml
 
-RUN mv /tmp/jetty-*.jar /var/lib/wildfly/modules/org/eclipse/jetty/main/
-RUN sed -i "s/\$JETTY_VERSION/${JETTY_VERSION}/g" /var/lib/wildfly/modules/org/eclipse/jetty/main/module.xml
+RUN sed -i '/<dependencies>/a <module name="org.jgroups.googleping"\/>' ${WILDFLY_HOME}/modules/system/layers/base/org/jgroups/main/module.xml
+RUN sed -i '/<dependencies>/a <module name="org.jgroups.googleping"\/>' ${WILDFLY_HOME}/modules/system/layers/base/org/jboss/as/clustering/jgroups/main/module.xml
 
-RUN mv /tmp/jgroups-*.jar /var/lib/wildfly/modules/system/layers/base/org/jgroups/main/
-RUN sed -i "s/\$JGROUPS_VERSION/${JGROUPS_VERSION}/g" /var/lib/wildfly/modules/system/layers/base/org/jgroups/main/module.xml
-
-RUN ln -s /var/lib/wildfly/standalone/deployments /deployments
+RUN ln -s ${WILDFLY_HOME}/standalone/deployments /deployments
 WORKDIR /deployments
 
 # Wildfly HTTP port number
@@ -54,11 +48,15 @@ EXPOSE 8080
 # Wildfly HTTP Admin port number
 EXPOSE 9990
 
+# Widlfy JGroups Ports
+EXPOSE 7600
+EXPOSE 57600
+
 # Java VM debug port number
 EXPOSE 5005
 
 # Env variable used by the jetty_run.sh script
-ENV RUNTIME_DIR /var/lib/wildfly
+ENV RUNTIME_DIR ${WILDFLY_HOME}
 
 # Clean any CMD that might be inherited from previous image, because that
 # will pollute our ENTRYPOINT, see

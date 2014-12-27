@@ -26,12 +26,19 @@ limitations under the License.
 	</system-properties-->
 
 	<vm>true</vm>
-	<vm-settings>
-		<setting name="machine_type" value="n1-standard-2" />
-	</vm-settings>
-	<manual-scaling>
-		<instances>1</instances>
-	</manual-scaling>
+	<resources>
+    <cpu>2</cpu>
+    <memory-gb>2</memory-gb>
+    <disk-size-gb>10</disk-size-gb>
+  </resources>
+  <manual-scaling>
+    <instances>2</instances>
+  </manual-scaling>
+
+  <network>
+    <forwarded-port>7600</forwarded-port>
+    <instance-tag>appengine</instance-tag>
+  </network>
 
 	<static-files>
 		<include path="/resources/**" expiration="0s" />
