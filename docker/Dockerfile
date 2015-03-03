@@ -20,10 +20,10 @@ RUN apt-get -q update && \
   apt-get clean && \
   rm /var/lib/apt/lists/*_*
 
-ENV WILDFLY_VERSION 8.2.0.Final
-RUN mkdir -p /var/lib/wildfly && (curl -0 http://download.jboss.org/wildfly/${WILDFLY_VERSION}/wildfly-${WILDFLY_VERSION}.tar.gz | tar -C /var/lib/wildfly --strip-components=1 -zx)
-
 ENV WILDFLY_HOME /var/lib/wildfly
+ENV WILDFLY_VERSION 8.2.0.Final
+RUN mkdir -p ${WILDFLY_HOME} && (curl -0 http://download.jboss.org/wildfly/${WILDFLY_VERSION}/wildfly-${WILDFLY_VERSION}.tar.gz | tar -C ${WILDFLY_HOME} --strip-components=1 -zx)
+
 ENV APPENGINE_VERSION 1.9.18
 ENV JGROUPS_VERSION 3.6.2.Final
 
@@ -33,8 +33,8 @@ RUN cd /tmp/ && curl -0 \
 
 ADD . ${WILDFLY_HOME}
 
-RUN mv /tmp/appengine-*.jar /var/lib/wildfly/modules/com/google/appengine/main/
-RUN sed -i "s/\$APPENGINE_VERSION/${APPENGINE_VERSION}/g" /var/lib/wildfly/modules/com/google/appengine/main/module.xml
+RUN mv /tmp/appengine-*.jar ${WILDFLY_HOME}/modules/com/google/appengine/main/
+RUN sed -i "s/\$APPENGINE_VERSION/${APPENGINE_VERSION}/g" ${WILDFLY_HOME}/modules/com/google/appengine/main/module.xml
 
 RUN sed -i '/<dependencies>/a <module name="org.jgroups.googleping"\/>' ${WILDFLY_HOME}/modules/system/layers/base/org/jgroups/main/module.xml
 RUN sed -i '/<dependencies>/a <module name="org.jgroups.googleping"\/>' ${WILDFLY_HOME}/modules/system/layers/base/org/jboss/as/clustering/jgroups/main/module.xml
